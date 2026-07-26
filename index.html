@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hostel Management System — UI Blueprint</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gradArc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F46E5"></stop><stop offset="1" stop-color="#818CF8"></stop>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="side-brand">
+      <div class="mark">HM</div>
+      <div><b>HostelOS</b><span>Comprehensive Hostel Admin</span></div>
+    </div>
+    <div class="side-role" id="side-role-label">Hostel Admin</div>
+    <nav id="side-nav"></nav>
+    <div class="side-foot">Group C9 · 23CSE202<br><code>PostgreSQL · Python · JS</code></div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar">
+      <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
+      <div class="role-switch" role="tablist" aria-label="Switch role" id="role-switch">
+        <button data-role="admin" class="on">Hostel Admin</button>
+        <button data-role="student">Student</button>
+        <button data-role="college">College</button>
+      </div>
+      <div class="top-user"><div class="avatar" id="top-avatar">HA</div></div>
+    </header>
+
+    <div class="content" id="content-root">
+
+      <!-- ====================== ADMIN: OVERVIEW ====================== -->
+      <section class="view" data-view="admin/overview">
+        <div class="view-head">
+          <div><h1 class="h-24">Operations overview</h1><p class="t-13">Live metrics from the hostel database — <span class="mono" id="ov-date"></span></p></div>
+          <button class="btn btn-outline btn-sm" id="ov-refresh">Refresh metrics</button>
+        </div>
+        <div class="grid cols-4" id="stat-grid"></div>
+        <div class="grid cols-2" style="margin-top:16px">
+          <div class="card pad">
+            <h3 class="h-15" style="margin-bottom:10px">Recent complaints</h3>
+            <div id="ov-recent-complaints"></div>
+          </div>
+          <div class="card pad">
+            <h3 class="h-15" style="margin-bottom:10px">Approved passes awaiting checkout</h3>
+            <div id="ov-active-passes"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== ADMIN: ROOMS ====================== -->
+      <section class="view" data-view="admin/rooms">
+        <div class="view-head">
+          <div><h1 class="h-24">Room allocation</h1><p class="t-13">Click a <b style="color:var(--emerald-600)">green bed</b> to allocate, a <b style="color:var(--rose-600)">red bed</b> to view the occupant.</p></div>
+          <div class="legend"><span><i style="background:var(--emerald-500)"></i>Vacant bed</span><span><i style="background:var(--rose-500)"></i>Occupied bed</span></div>
+        </div>
+        <div class="rooms-split">
+          <div class="card pad" style="display:flex;flex-direction:column;gap:16px">
+            <div class="field">
+              <label for="rf-block">Block</label>
+              <select class="control" id="rf-block">
+                <option value="">All blocks</option><option>Block A</option><option>Block B</option><option>Block C</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Room type</label>
+              <label class="checkline"><input type="checkbox" class="rf-type" value="Single" checked>Single</label>
+              <label class="checkline"><input type="checkbox" class="rf-type" value="Double" checked>Double</label>
+              <label class="checkline"><input type="checkbox" class="rf-type" value="AC" checked>AC</label>
+              <label class="checkline"><input type="checkbox" class="rf-type" value="Non-AC" checked>Non-AC</label>
+            </div>
+            <div class="field">
+              <label for="rf-search">Search student</label>
+              <input class="control" id="rf-search" placeholder="Name or roll number…">
+              <span class="helper">Debounced 300 ms — matching rooms stay highlighted.</span>
+            </div>
+            <div class="t-12" id="rf-count"></div>
+          </div>
+          <div class="roomgrid" id="roomgrid"></div>
+        </div>
+      </section>
+
+      <!-- ====================== ADMIN: COMPLAINTS ====================== -->
+      <section class="view" data-view="admin/complaints">
+        <div class="view-head">
+          <div><h1 class="h-24">Complaint management</h1><p class="t-13">Click any row for the full ticket, resolution notes and staff assignment.</p></div>
+          <div class="tabbar" id="cmp-tabs">
+            <button data-f="all" class="on">All complaints</button>
+            <button data-f="open">Open / Escalated</button>
+            <button data-f="resolved">Resolved</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th class="sortable" data-sort="id" data-tip="complaint.complaint_id CHAR(12) PK">ID</th>
+                <th data-tip="JOIN student USING (roll_no)">Student</th>
+                <th data-tip="complaint.category VARCHAR(24)">Category</th>
+                <th class="sortable" data-sort="urgency" data-tip="complaint.urgency ENUM('LOW','MEDIUM','HIGH')">Urgency</th>
+                <th class="sortable" data-sort="filedAt" data-tip="complaint.filed_at TIMESTAMP">Date filed</th>
+                <th data-tip="complaint.status ENUM('OPEN','ESCALATED','RESOLVED')">Status</th>
+                <th>Actions</th>
+              </tr></thead>
+              <tbody id="cmp-body"></tbody>
+            </table>
+          </div>
+          <div class="pager" id="cmp-pager"></div>
+        </div>
+      </section>
+
+      <!-- ====================== ADMIN: ATTENDANCE ====================== -->
+      <section class="view" data-view="admin/attendance">
+        <div class="view-head">
+          <div><h1 class="h-24">Attendance</h1><p class="t-13">Wardens mark the daily roster digitally — replaces the physical register.</p></div>
+        </div>
+        <div class="card pad" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px">
+          <div class="field"><label for="att-date">Date</label><input type="date" class="control" id="att-date"></div>
+          <div class="field"><label for="att-block">Block</label>
+            <select class="control" id="att-block"><option value="">All blocks</option><option>Block A</option><option>Block B</option><option>Block C</option></select></div>
+          <div style="flex:1"></div>
+          <button class="btn btn-outline btn-sm" id="att-all-p">Mark all present</button>
+          <button class="btn btn-outline btn-sm" id="att-all-a">Mark all absent</button>
+          <button class="btn btn-primary btn-sm" id="att-csv"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Export CSV</button>
+        </div>
+        <div class="card">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th data-tip="student.roll_no PK · student.name">Student</th>
+                <th data-tip="allocation.room_no FK">Room</th>
+                <th data-tip="attendance.status ENUM('P','A','L')">Status</th>
+                <th data-tip="attendance.note VARCHAR(120)">Notes</th>
+              </tr></thead>
+              <tbody id="att-body"></tbody>
+            </table>
+          </div>
+          <div class="pad t-12" id="att-summary" style="padding-top:0"></div>
+        </div>
+      </section>
+
+      <!-- ====================== ADMIN: LEAVES ====================== -->
+      <section class="view" data-view="admin/leaves">
+        <div class="view-head">
+          <div><h1 class="h-24">Leave tracking</h1><p class="t-13">College-validated passes and the historical out-station registry.</p></div>
+        </div>
+        <h3 class="h-15" style="margin-bottom:10px">Active passes</h3>
+        <div class="grid cols-2" id="lv-active"></div>
+        <h3 class="h-15" style="margin:22px 0 10px">Historical log</h3>
+        <div class="card">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th data-tip="leave.leave_id CHAR(12) PK">ID</th>
+                <th>Student</th>
+                <th data-tip="leave.depart_at TIMESTAMP">Departure</th>
+                <th data-tip="leave.expected_return TIMESTAMP">Expected return</th>
+                <th data-tip="leave.actual_return TIMESTAMP">Actual return</th>
+                <th>Outcome</th>
+              </tr></thead>
+              <tbody id="lv-history"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== ADMIN: DESIGN SYSTEM ====================== -->
+      <section class="view" data-view="admin/design">
+        <div class="view-head"><div><h1 class="h-24">Design system</h1><p class="t-13">Tokens and the five mandated component states, as specified in the blueprint.</p></div></div>
+        <div class="card pad" style="margin-bottom:16px">
+          <h3 class="h-15" style="margin-bottom:10px">Palette</h3>
+          <div class="swatches">
+            <div class="sw"><i style="background:#1E293B"></i><div><b>Deep Slate</b><span class="mono">#1E293B</span></div></div>
+            <div class="sw"><i style="background:#4F46E5"></i><div><b>Indigo</b><span class="mono">#4F46E5</span></div></div>
+            <div class="sw"><i style="background:#10B981"></i><div><b>Emerald</b><span class="mono">#10B981</span></div></div>
+            <div class="sw"><i style="background:#F59E0B"></i><div><b>Amber</b><span class="mono">#F59E0B</span></div></div>
+            <div class="sw"><i style="background:#EF4444"></i><div><b>Rose</b><span class="mono">#EF4444</span></div></div>
+            <div class="sw"><i style="background:#F8FAFC;border-bottom:1px solid #E2E8F0"></i><div><b>Off-white</b><span class="mono">#F8FAFC</span></div></div>
+          </div>
+        </div>
+        <div class="card pad" style="margin-bottom:16px">
+          <h3 class="h-15" style="margin-bottom:10px">Type scale</h3>
+          <p class="h-24">24px — Page headers</p>
+          <p class="h-18">18px — Section titles</p>
+          <p class="h-15">15px — Card titles</p>
+          <p style="font-size:14px">14px — Body copy</p>
+          <p class="t-13">13px — Secondary body</p>
+          <p class="t-12">12px — Muted helper text</p>
+        </div>
+        <div class="card pad">
+          <h3 class="h-15" style="margin-bottom:12px">The five component states</h3>
+          <div class="statesrow">
+            <button class="btn btn-primary">1 · Default</button>
+            <button class="btn btn-primary" style="filter:brightness(1.08);box-shadow:0 0 0 3px var(--ring)">2 · Hover / Focus</button>
+            <button class="btn btn-primary loading" disabled><span class="spin"></span>3 · Loading</button>
+            <span class="badge ok">4 · Success</span>
+            <span class="badge bad">5 · Error</span>
+          </div>
+          <div class="field invalid" style="max-width:300px;margin-top:16px">
+            <label>Roll number</label>
+            <input class="control" value="AM.SC.XXXX">
+            <p class="err" role="alert">Invalid Student ID — no matching student.roll_no in the database.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== STUDENT: HOME ====================== -->
+      <section class="view" data-view="student/home">
+        <div class="stu-wrap" style="display:flex;flex-direction:column;gap:16px">
+          <div class="card pad idcard">
+            <svg class="qr" id="stu-qr" viewBox="0 0 29 29" aria-label="Digital ID QR code"></svg>
+            <div style="min-width:0">
+              <span class="badge info" style="margin-bottom:6px">Digital ID · Active</span>
+              <h1 class="h-18">Gowtham Adithya</h1>
+              <p class="t-13 mono">AM.SC.U4CSE25258</p>
+              <p class="t-13" style="margin-top:2px">Block B · Room <b>B-302</b> · S3 CSE</p>
+            </div>
+          </div>
+          <div class="quick">
+            <button id="qa-complaint">
+              <span class="qico" style="background:var(--rose-500)"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:21px;height:21px"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></span>
+              <b>File new complaint</b><span>Maintenance, housekeeping, network…</span>
+            </button>
+            <button id="qa-leave">
+              <span class="qico" style="background:var(--indigo-600)"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:21px;height:21px"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg></span>
+              <b>Apply out-station leave</b><span>Advisor approval → warden notified</span>
+            </button>
+          </div>
+          <div class="card pad">
+            <h3 class="h-15" style="margin-bottom:12px">Current status</h3>
+            <ul class="feed" id="stu-feed"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== STUDENT: COMPLAINT ====================== -->
+      <section class="view" data-view="student/complaint">
+        <div class="stu-wrap">
+          <div class="card pad" id="cform-card">
+            <h1 class="h-18" style="margin-bottom:4px">Register a complaint</h1>
+            <p class="t-13" style="margin-bottom:18px">Goes straight to the Hostel Admin maintenance queue.</p>
+            <form id="cform" novalidate style="display:flex;flex-direction:column;gap:16px">
+              <div class="field">
+                <label for="cf-cat">Category</label>
+                <select id="cf-cat" class="control">
+                  <option value="">Select a category…</option>
+                  <option>Plumbing</option><option>Electrical &amp; Lighting</option><option>Carpentry / Furniture</option>
+                  <option>Internet Connectivity</option><option>Housekeeping</option><option>Other</option>
+                </select>
+                <p class="err" role="alert">Choose a category — complaint.category is NOT NULL.</p>
+              </div>
+              <div class="field">
+                <label for="cf-title">Title</label>
+                <input id="cf-title" class="control" maxlength="50" placeholder="Brief title of the issue">
+                <div class="count"><span id="cf-title-n">0</span>/50 — VARCHAR(50)</div>
+                <p class="err" role="alert">A short title is required (min. 5 characters).</p>
+              </div>
+              <div class="field">
+                <label for="cf-desc">Detailed description</label>
+                <textarea id="cf-desc" class="control" maxlength="400" placeholder="Provide absolute context (e.g., The tap in washroom B is leaking continuously)…"></textarea>
+                <div class="count"><span id="cf-desc-n">0</span>/400</div>
+                <p class="err" role="alert">Describe the issue in at least 15 characters.</p>
+              </div>
+              <div class="field">
+                <label>Photo proof <span class="t-12">(optional, .png / .jpeg, max 3)</span></label>
+                <div class="drop" id="cf-drop" role="button" tabindex="0" aria-label="Upload images">
+                  <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>
+                  <b>Drag &amp; drop images here</b><span>or click to browse</span>
+                  <input type="file" id="cf-file" accept="image/png,image/jpeg" multiple hidden>
+                </div>
+                <div class="thumbs" id="cf-thumbs"></div>
+              </div>
+              <div style="display:flex;gap:12px;justify-content:flex-end;align-items:center">
+                <button type="button" class="btn btn-ghost" id="cf-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="cf-submit"><span class="spin"></span>Submit ticket to maintenance</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== STUDENT: LEAVE ====================== -->
+      <section class="view" data-view="student/leave">
+        <div class="stu-wrap">
+          <div class="card pad" id="lform-card">
+            <h1 class="h-18" style="margin-bottom:4px">Apply for out-station leave</h1>
+            <p class="t-13" style="margin-bottom:18px">Submitted to the College authority for authorization; the warden is notified on approval.</p>
+            <form id="lform" novalidate style="display:flex;flex-direction:column;gap:16px">
+              <div class="field">
+                <label>Leave type</label>
+                <div class="rcards" id="lf-types">
+                  <label class="on"><input type="radio" name="lf-type" value="Weekend Outing" checked><b>Weekend outing</b><span>Short local trip</span></label>
+                  <label><input type="radio" name="lf-type" value="Emergency Leave"><b>Emergency leave</b><span>Advisor pinged instantly</span></label>
+                  <label><input type="radio" name="lf-type" value="Vacation / Holidays"><b>Vacation</b><span>Semester breaks</span></label>
+                </div>
+              </div>
+              <div class="grid cols-2">
+                <div class="field">
+                  <label for="lf-dep">Departure date &amp; time</label>
+                  <input type="datetime-local" id="lf-dep" class="control">
+                  <p class="err" role="alert">Pick a departure time.</p>
+                </div>
+                <div class="field">
+                  <label for="lf-ret">Expected return date &amp; time</label>
+                  <input type="datetime-local" id="lf-ret" class="control">
+                  <p class="err" role="alert">Return must be after departure.</p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="lf-dest">Destination</label>
+                <input id="lf-dest" class="control" placeholder="City / full address">
+                <p class="err" role="alert">Enter your travel destination.</p>
+              </div>
+              <div class="field">
+                <label for="lf-reason">Reason for leave</label>
+                <textarea id="lf-reason" class="control" maxlength="300" placeholder="Detailed justification for leaving campus premises…"></textarea>
+                <div class="count"><span id="lf-reason-n">0</span>/300</div>
+                <p class="err" role="alert">Give a justification of at least 20 characters.</p>
+              </div>
+              <div class="field">
+                <div style="display:flex;gap:12px;align-items:center">
+                  <span class="switch"><input type="checkbox" id="lf-consent"><span class="trk"></span></span>
+                  <label for="lf-consent" style="font-size:13px;font-weight:500;cursor:pointer">I confirm my parents / guardians are fully informed of this travel itinerary.</label>
+                </div>
+                <p class="err" role="alert">Guardian consent confirmation is mandatory.</p>
+              </div>
+              <div class="field" style="max-width:280px">
+                <label for="lf-phone">Emergency contact</label>
+                <input id="lf-phone" class="control" inputmode="numeric" placeholder="10-digit mobile number">
+                <p class="err" role="alert">Must match guardian_phone CHAR(10) — exactly 10 digits.</p>
+              </div>
+              <div style="display:flex;justify-content:flex-end">
+                <button type="submit" class="btn btn-primary" id="lf-submit"><span class="spin"></span>Submit for college authorization</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================== COLLEGE ====================== -->
+      <section class="view" data-view="college/authorize">
+        <div class="view-head">
+          <div><h1 class="h-24">Leave authorization</h1><p class="t-13">Pending applications across campus. Select one to audit and decide.</p></div>
+          <span class="badge warn" id="col-count"></span>
+        </div>
+        <div class="college-split">
+          <div class="queue" id="col-queue"></div>
+          <div class="card pad doc" id="col-doc"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- bottom nav (mobile) -->
+<nav class="bottomnav" id="bottomnav" aria-label="Primary"></nav>
+
+<!-- drawer + overlay + popover + toasts -->
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true">
+  <div class="drawer-head"><h3 id="drawer-title">Drawer</h3>
+    <button class="iconbtn x" id="drawer-x" aria-label="Close panel"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-foot" id="drawer-foot"></div>
+</aside>
+<div class="popover" id="popover"></div>
+<div class="toasts" id="toasts"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
